@@ -6,8 +6,6 @@
 package extruder;
 
 import dynamics.gui.BaseGuiContainer;
-import dynamics.gui.component.BaseComposite;
-import dynamics.gui.component.GuiComponentPanel;
 
 public class GuiExtruder extends BaseGuiContainer<ContainerExtruder> {
 

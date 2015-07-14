@@ -5,29 +5,24 @@
  */
 package extruder;
 
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import dynamics.Log;
-import dynamics.inventory.DynamicInventory;
-import dynamics.inventory.IInventoryProvider;
-import dynamics.utils.coord.BlockCoord;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockObsidian;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
 import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.DamageSource;
-import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import dynamics.Log;
+import dynamics.inventory.DynamicInventory;
+import dynamics.inventory.IInventoryProvider;
+import dynamics.utils.coord.BlockCoord;
 
 public class EntityExtruder extends Entity implements IInventoryProvider {
 
@@ -40,7 +35,7 @@ public class EntityExtruder extends Entity implements IInventoryProvider {
     protected DynamicInventory inventory = createInventory(37);
 
     public EntityExtruder(World world) {
-        super(world);
+        super (world);
         this.setSize(1.0F, 1.0F);
         for (int i = 0; i < dataWatcherEntries; ++i) {
             int j = dataWatcherStart + i;
@@ -171,22 +166,34 @@ public class EntityExtruder extends Entity implements IInventoryProvider {
             if (worldObj.isRemote) worldObj.playAuxSFX(1001, (int) posX, (int) posY, (int) posZ, 0);
 
             if (worldObj.getBlock(front.x, front.y, front.z) instanceof BlockObsidian) {
+                setMotion(0, 0, 0);
                 setRunning(false);
             } else if (!worldObj.isAirBlock(front.x, front.y, front.z)) {
                 setMotion(0, 0, 0);
                 worldObj.setBlockToAir(front.x, front.y, front.z);
             }
 
-            if (worldObj.isAirBlock(back.x, back.y, back.z)) {
-                Block block = null;
-                if (inventory.contents().size() != 0)
-                    for (ItemStack stack : inventory.contents())
-                        if (stack != null) {
-                            stack.stackSize--;
-                            block = Block.getBlockFromItem(stack.getItem());
-                            if (block != null) worldObj.setBlock(back.x, back.y, back.z, block, stack.getItemDamage(), 3);
-                            break;
-                        }
+            placeBlockBehind(back);
+        }
+    }
+
+    private void breakBlockInFront(BlockCoord coord) {
+
+    }
+
+    private void placeBlockBehind(BlockCoord coord) {
+        if (worldObj.isRemote) return;
+
+        if (worldObj.isAirBlock(coord.x, coord.y, coord.z)) {
+            Block block = null;
+            if (inventory.contents().size() != 0) {
+                for (int i = 1; i < 10; ++i) { // runs through slots 1-9
+                    ItemStack stack = inventory.decrStackSize(i, 1);
+                    if (stack == null) continue;
+                    block = Block.getBlockFromItem(stack.getItem());
+                    worldObj.setBlock(coord.x, coord.y, coord.z, block, stack.getItemDamage(), 3);
+                    break;
+                }
             }
         }
     }

@@ -5,14 +5,14 @@
  */
 package extruder;
 
-import dynamics.config.properties.ConfigProperty;
-import dynamics.config.properties.OnlineModifiable;
+import java.util.List;
+
 import net.minecraft.init.Blocks;
 import net.minecraft.item.crafting.CraftingManager;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraftforge.oredict.ShapelessOreRecipe;
-
-import java.util.List;
+import dynamics.config.properties.ConfigProperty;
+import dynamics.config.properties.OnlineModifiable;
 
 public class Config {
 

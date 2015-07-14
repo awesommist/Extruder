@@ -5,6 +5,15 @@
  */
 package extruder;
 
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.item.Item;
+import net.minecraftforge.common.config.Configuration;
+import dynamics.DynamicLib;
+import dynamics.config.ItemInstances;
+import dynamics.config.game.ModStartupHelper;
+import dynamics.config.game.RegisterItem;
+import dynamics.config.properties.ConfigProcessing;
+
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.Mod.Instance;
@@ -15,14 +24,6 @@ import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.EntityRegistry;
-import dynamics.DynamicLib;
-import dynamics.config.ItemInstances;
-import dynamics.config.game.ModStartupHelper;
-import dynamics.config.game.RegisterItem;
-import dynamics.config.properties.ConfigProcessing;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.item.Item;
-import net.minecraftforge.common.config.Configuration;
 
 @Mod(modid = Extruder.MODID, name = Extruder.NAME, version = Extruder.VERSION, dependencies = Extruder.DEPENDENCIES)
 public class Extruder {

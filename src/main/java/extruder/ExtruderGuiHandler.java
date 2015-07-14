@@ -5,11 +5,12 @@
  */
 package extruder;
 
-import cpw.mods.fml.common.network.IGuiHandler;
-import dynamics.Log;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.world.World;
+import dynamics.Log;
+
+import cpw.mods.fml.common.network.IGuiHandler;
 
 public class ExtruderGuiHandler implements IGuiHandler {
 

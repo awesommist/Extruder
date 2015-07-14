@@ -5,8 +5,6 @@
  */
 package extruder;
 
-import extruder.IExtruderProxy;
-
 public class ServerProxy implements IExtruderProxy {
 
     @Override

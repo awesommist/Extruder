@@ -5,8 +5,9 @@
  */
 package extruder;
 
+import net.minecraftforge.client.MinecraftForgeClient;
+
 import cpw.mods.fml.client.registry.RenderingRegistry;
-import extruder.IExtruderProxy;
 
 public class ClientProxy implements IExtruderProxy {
 
@@ -15,6 +16,7 @@ public class ClientProxy implements IExtruderProxy {
 
     @Override
     public void init() {
+        MinecraftForgeClient.registerItemRenderer(Extruder.Items.extruder, new ItemExtruderRenderer());
         RenderingRegistry.registerEntityRenderingHandler(EntityExtruder.class, new EntityExtruderRenderer());
     }
 

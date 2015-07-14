@@ -5,13 +5,13 @@
  */
 package extruder;
 
-import dynamics.item.DynamicItem;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
+import dynamics.item.DynamicItem;
 
 public class ItemExtruder extends DynamicItem {
 
@@ -20,14 +20,7 @@ public class ItemExtruder extends DynamicItem {
     }
 
     @Override
-    public void registerIcons(IIconRegister iconRegister) {
-        itemIcon = iconRegister.registerIcon("extruder:extruder");
-    }
-
-    @Override
     public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
-        if (world.isRemote) return stack;
-
         MovingObjectPosition mop = getMovingObjectPositionFromPlayer(world, player, true);
 
         if (mop == null) return stack;
@@ -35,6 +28,11 @@ public class ItemExtruder extends DynamicItem {
         ForgeDirection facing = determineFacing(player);
         EntityExtruder extruder;
         if (mop.typeOfHit == MovingObjectPosition.MovingObjectType.BLOCK) {
+            if (world.isRemote) {
+                player.swingItem();
+                return stack;
+            }
+
             switch (mop.sideHit) {
                 case 0:
                     extruder = new EntityExtruder(world, mop.blockX + 0.5F, mop.blockY - 1.0F, mop.blockZ + 0.5F, facing);
