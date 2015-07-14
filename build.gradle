@@ -1,0 +1,82 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            name = "forge"
+            url = "http://files.minecraftforge.net/maven"
+        }
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
+    }
+}
+
+apply plugin: 'forge'
+
+ext.configFile = file('build.properties')
+
+ext.config = parseConfig(configFile)
+
+version = "${config.version}-${config.build_number}"
+group= "extruder"
+archivesBaseName = config.mod_name
+
+minecraft {
+    version = "${config.mc_version}-${config.forge_version}-${config.mc_version}"
+    runDir = "buildbin"
+    
+    replace '$VERSION$', config.version
+    replace '$BUILD$', config.build_number
+    
+    replaceIn 'Extruder.java'
+}
+
+dependencies {
+
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+    
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        
+        expand 'version': project.version, 'mcversion': project.minecraft.version
+    }
+    
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
+
+task deobfJar(type: Jar) {
+    from(sourceSets.main.output)
+        archiveName = "${baseName} ${version}-deobf.${extension}"
+}
+
+artifacts {
+    archives deobfJar
+}
+
+task incrementBuildNumber(dependsOn: 'reobf') << {
+    config.build_number = (config.build_number.toString().toInteger()) + 1
+    configFile.withWriter {
+        config.toProperties().store(it, "")
+    }
+}
+
+def parseConfig(File config) {
+    config.withReader {
+        def prop = new Properties()
+        prop.load(it)
+        return (new ConfigSlurper().parse(prop))
+}
+} // Gradle doesn't build without these brackets
+
+build.dependsOn tasks.incrementBuildNumber
+defaultTasks 'clean', 'build'

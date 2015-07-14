@@ -1,0 +1,3 @@
+[submodule "DynamicLib"]
+    path = DynamicLib
+    url = https://github.com/awesommist/DynamicLib.git

@@ -1,0 +1,8 @@
+# Best lang file ever
+itemGroup.tabExtruder=Extruder Mod
+
+item.extruder.extruder.name=Extruder
+
+entity.extruder.extruder.name=Extruder
+
+extruder.gui.extruder=Extruder
