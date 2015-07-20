@@ -5,8 +5,6 @@
  */
 package extruder;
 
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.item.Item;
 import net.minecraftforge.common.config.Configuration;
 import dynamics.DynamicLib;
 import dynamics.config.ItemInstances;
@@ -14,6 +12,7 @@ import dynamics.config.game.ModStartupHelper;
 import dynamics.config.game.RegisterItem;
 import dynamics.config.properties.ConfigProcessing;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.Mod.Instance;
@@ -36,6 +35,7 @@ public class Extruder {
     public static final String DEPENDENCIES = "required-after:dynamiclib";
 
     public static final int ENTITY_EXTRUDER_ID = 777;
+
     @Instance(MODID)
     public static Extruder instance;
 
@@ -47,13 +47,6 @@ public class Extruder {
         public static ItemExtruder extruder;
     }
 
-    public static CreativeTabs tabExtruder = new CreativeTabs("tabExtruder") {
-        @Override
-        public Item getTabIconItem() {
-            return Items.extruder;
-        }
-    };
-
     private final ModStartupHelper startupHelper = new ModStartupHelper(MODID) {
         @Override
         protected void populateConfig(Configuration config) {
@@ -61,15 +54,13 @@ public class Extruder {
         }
     };
 
-    public static int renderId;
-
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         startupHelper.registerItemsHolder(Items.class);
-
         startupHelper.preInit(event.getSuggestedConfigurationFile());
 
         Config.register();
+        FMLCommonHandler.instance().bus().register(Extruder.instance);
 
         NetworkRegistry.INSTANCE.registerGuiHandler(instance, DynamicLib.proxy.wrapHandler(new ExtruderGuiHandler()));
 
@@ -91,9 +82,5 @@ public class Extruder {
     @EventHandler
     public void handleRenames(FMLMissingMappingsEvent event) {
         startupHelper.handleRenames(event);
-    }
-
-    public static String getModId() {
-        return Extruder.class.getAnnotation(Mod.class).modid();
     }
 }

@@ -7,6 +7,4 @@ package extruder;
 
 import dynamics.api.IProxy;
 
-public interface IExtruderProxy extends IProxy {
-
-}
+public interface IExtruderProxy extends IProxy {}

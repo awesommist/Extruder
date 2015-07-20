@@ -6,3 +6,5 @@ item.extruder.extruder.name=Extruder
 entity.extruder.extruder.name=Extruder
 
 extruder.gui.extruder=Extruder
+extruder.gui.extruder.fuel=Fuel:
+extruder.gui.extruder.mined=Mined

@@ -5,50 +5,62 @@
  */
 package extruder;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockObsidian;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
+import net.minecraft.init.Items;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntityFurnace;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
-import dynamics.Log;
+import dynamics.api.IValueProvider;
+import dynamics.entity.SyncedEntity;
 import dynamics.inventory.DynamicInventory;
 import dynamics.inventory.IInventoryProvider;
+import dynamics.sync.SyncMap;
+import dynamics.sync.SyncableInt;
+import dynamics.utils.InventoryUtils;
 import dynamics.utils.coord.BlockCoord;
 
-public class EntityExtruder extends Entity implements IInventoryProvider {
+// this is a mess
+public class EntityExtruder extends SyncedEntity implements IInventoryProvider {
 
     private static final String TAG_FACING = "facing";
     private static final String TAG_RUNNING = "running";
+    private static final String TAG_FUEL = "fuel";
 
-    private static final int dataWatcherEntries = 5;
+    private static final int dataWatcherEntries = 6;
     private static final int dataWatcherStart = 32 - dataWatcherEntries;
+
+    // used for placing blocks
+    private int slot = 0;
+
+    private SyncableInt fuel;
 
     protected DynamicInventory inventory = createInventory(37);
 
     public EntityExtruder(World world) {
-        super (world);
-        this.setSize(1.0F, 1.0F);
+        super(world);
+        this.setSize(.8f, .8f);
+        this.boundingBox.setBounds(.1, .1, .1, .9, 1, .9);
         for (int i = 0; i < dataWatcherEntries; ++i) {
             int j = dataWatcherStart + i;
-            if (i == 0) dataWatcher.addObject(j, (byte) 0);
+            if (i == 0 || i == 5) dataWatcher.addObject(j, (byte) 0);
             else if (i == 1) dataWatcher.addObject(j, "");
             else if (i == 2) dataWatcher.addObject(j, (float) 0);
-            else dataWatcher.addObject(j, (int) 0);
+            else dataWatcher.addObject(j, 0);
 
             dataWatcher.setObjectWatched(j);
         }
     }
 
-    public EntityExtruder(World world, float x, float y, float z, ForgeDirection facing) {
+    public EntityExtruder(World world, double x, double y, double z, ForgeDirection facing) {
         this (world);
         this.setPosition(x, y, z);
         setFacing(facing);
@@ -59,11 +71,34 @@ public class EntityExtruder extends Entity implements IInventoryProvider {
     }
 
     @Override
+    protected void createSyncedFields() {
+        fuel = new SyncableInt();
+    }
+
+    @Override
     protected void entityInit() {}
 
     @Override
     public void onUpdate() {
         super.onUpdate();
+
+        if (getRunning())
+            run();
+        else
+            postRun();
+
+        if (Config.useFuel && !worldObj.isRemote) {
+            if (inventory.getStackInSlot(0) != null && TileEntityFurnace.isItemFuel(inventory.getStackInSlot(0)) &&
+                    (fuel.get() + TileEntityFurnace.getItemBurnTime(inventory.getStackInSlot(0))) <= Config.maxFuelLevel)
+                if (inventory.getStackInSlot(0).getItem().equals(Items.lava_bucket)) {
+                    fuel.modify(TileEntityFurnace.getItemBurnTime(inventory.decrStackSize(0, 1)));
+                    inventory.setInventorySlotContents(0, new ItemStack(Items.bucket));
+                } else {
+                    fuel.modify(TileEntityFurnace.getItemBurnTime(inventory.decrStackSize(0, 1)));
+                }
+
+            if (fuel.isDirty()) sync();
+        }
 
         lastTickPosX = posX;
         lastTickPosY = posY;
@@ -74,14 +109,9 @@ public class EntityExtruder extends Entity implements IInventoryProvider {
         posZ += motionZ;
 
         setPosition(posX, posY, posZ);
-        setMotion(motionX, motionY, motionZ);
+
         if (getTimeSinceHit() > 0) setTimeSinceHit(getTimeSinceHit() - 1);
         if (getDamageTaken() > 0) setDamageTaken(getDamageTaken() - 1);
-
-        if (getRunning())
-            run();
-        else
-            postRun();
     }
 
     private DynamicInventory createInventory(int size) {
@@ -89,6 +119,11 @@ public class EntityExtruder extends Entity implements IInventoryProvider {
             @Override
             public boolean isUseableByPlayer(EntityPlayer player) {
                 return !isDead && player.getDistanceSqToEntity(EntityExtruder.this) < 64;
+            }
+
+            @Override
+            public boolean isItemValidForSlot(int slot, ItemStack stack) {
+                return slot != 0 || TileEntityFurnace.isItemFuel(stack);
             }
         };
     }
@@ -102,6 +137,7 @@ public class EntityExtruder extends Entity implements IInventoryProvider {
     public void writeEntityToNBT(NBTTagCompound tag) {
         tag.setByte(TAG_FACING, (byte) getFacing().ordinal());
         tag.setBoolean(TAG_RUNNING, getRunning());
+        fuel.writeToNBT(tag, TAG_FUEL);
         inventory.writeToNBT(tag);
     }
 
@@ -109,26 +145,115 @@ public class EntityExtruder extends Entity implements IInventoryProvider {
     public void readEntityFromNBT(NBTTagCompound tag) {
         setFacing(ForgeDirection.getOrientation(tag.getByte(TAG_FACING)));
         setRunning(tag.getBoolean(TAG_RUNNING));
+        fuel.readFromNBT(tag, TAG_FUEL);
         inventory.readFromNBT(tag);
+    }
+
+    private void run() {
+        if (Config.useFuel) {
+            if (fuel.get() < Config.fuelPerTick) {
+                setRunning(false);
+                setMotion(0, 0, 0);
+                return;
+            }
+            fuel.modify(-Config.fuelPerTick);
+        }
+        setSineWave(getSineWave() + 1);
+
+        if (!worldObj.isRemote) {
+            setIsCentered((String.format("%.1f", posX % 1).equals("0.5") || String.format("%.1f", posX % 1).equals("-0.5")) &&
+                    (String.format("%.1f", posY % 1).equals("0.0") || String.format("%.1f", posY % 1).equals("1.0")) &&
+                    (String.format("%.1f", posZ % 1).equals("0.5") || String.format("%.1f", posZ % 1).equals("-0.5")));
+        }
+
+        if (getIsCentered()) {
+            if (worldObj.isRemote) {
+                worldObj.playAuxSFX(1001, (int) posX, (int) posY, (int) posZ, 0);
+            } else {
+                BlockCoord front = new BlockCoord(MathHelper.floor_double(posX) + getFacing().offsetX, Math.round(posY) + getFacing().offsetY, MathHelper.floor_double(posZ) + getFacing().offsetZ);
+                BlockCoord back = new BlockCoord(MathHelper.floor_double(posX) - getFacing().offsetX, Math.round(posY) - getFacing().offsetY, MathHelper.floor_double(posZ) - getFacing().offsetZ);
+
+                if (Config.useFuel) {
+                    if (fuel.get() >= Config.fuelPerBlockMined) {
+                        if (breakBlock(front)) fuel.modify(-Config.fuelPerBlockMined);
+                    }
+
+                    if (fuel.get() >= Config.fuelPerBlockExtruded) {
+                        if (placeBlock(back)) fuel.modify(-Config.fuelPerBlockExtruded);
+                    }
+                } else {
+                    breakBlock(front);
+                    placeBlock(back);
+                }
+
+                if (worldObj.getBlock(front.x, front.y, front.z).isBlockSolid(worldObj, front.x, front.y, front.z, worldObj.getBlockMetadata(front.x, front.y, front.z))) {
+                    setRunning(false);
+                    setMotion(0, 0, 0);
+                }
+            }
+        }
+    }
+
+    private boolean breakBlock(BlockCoord coord) {
+        Block block = worldObj.getBlock(coord.x, coord.y, coord.z);
+        int blockMetadata = worldObj.getBlockMetadata(coord.x, coord.y, coord.z);
+
+        if (block.equals(Blocks.obsidian) || block.equals(Blocks.bedrock) || block.equals(Blocks.lava) || block.equals(Blocks.flowing_lava)) {
+            setRunning(false);
+            setMotion(0, 0, 0);
+        } else if (block.isBlockSolid(worldObj, coord.x, coord.y, coord.z, blockMetadata)) {
+            if (!Config.destroyBlocks) {
+                for (int i = 10; i < 37; ++i) { // runs through slots 10-36 (mined inventory)
+                    if (block.getItemDropped(blockMetadata, rand, 0) == null) break; // check for beds, doors...
+                    ItemStack blockStack = new ItemStack(block.getItemDropped(blockMetadata, rand, 0), block.quantityDropped(rand), blockMetadata);
+                    ItemStack stackInSlot = inventory.getStackInSlot(i);
+                    if (blockStack.stackSize == 0) break;
+                    if (stackInSlot != null) {
+                        if (InventoryUtils.areMergeCandidates(blockStack, stackInSlot)) {
+                            if (InventoryUtils.tryMergeStacks(blockStack, stackInSlot)) break;
+                        }
+                    } else {
+                        inventory.setInventorySlotContents(i, blockStack);
+                        break;
+                    }
+                }
+            }
+            return worldObj.setBlockToAir(coord.x, coord.y, coord.z);
+        }
+
+        return false;
+    }
+
+    private boolean placeBlock(BlockCoord coord) {
+        if (worldObj.getBlock(coord.x, coord.y, coord.z).canPlaceBlockAt(worldObj, coord.x, coord.y, coord.z)) {
+            slot++;
+            if (slot > 9) slot = 1;
+            if (inventory.getStackInSlot(slot) != null) {
+                ItemStack stack = inventory.getStackInSlot(slot);
+                if (!(stack.getItem() instanceof ItemBlock)) return false;
+                stack = inventory.decrStackSize(slot, 1);
+                return worldObj.setBlock(coord.x, coord.y, coord.z, Block.getBlockFromItem(stack.getItem()), stack.getItemDamage(), 2);
+            }
+        }
+
+        return false;
+    }
+
+    private void postRun() {
+        if (motionX == 0 && motionY == 0 && motionZ == 0) return;
+
+        run();
+
+        if (getIsCentered()) setMotion(0, 0, 0);
     }
 
     @Override
     public boolean interactFirst(EntityPlayer player) {
-        if (worldObj.isRemote) return false;
-
-        if (!isDead)
+        if (!worldObj.isRemote && !isDead) {
             player.openGui(Extruder.instance, ExtruderGuiHandler.GuiId.EXTRUDER.ordinal(), player.worldObj, getEntityId(), 0, 0);
+            sync();
+        }
         return true;
-    }
-
-    @Override
-    public boolean canBeCollidedWith() {
-        return !isDead;
-    }
-
-    @Override
-    public AxisAlignedBB getBoundingBox() {
-        return boundingBox;
     }
 
     @Override
@@ -137,88 +262,63 @@ public class EntityExtruder extends Entity implements IInventoryProvider {
             setTimeSinceHit(10);
             setDamageTaken(this.getDamageTaken() + damage * 10.0F);
 
-            boolean isCreative = source.getEntity() instanceof EntityPlayer && ((EntityPlayer) source.getEntity()).capabilities.isCreativeMode;
+            boolean isPlayer = source.getEntity() instanceof EntityPlayer;
 
             if (this.getDamageTaken() > 20.0F) {
                 setDead();
-                if (!isCreative) dropItem(Extruder.Items.extruder, 1);
+                if (isPlayer) {
+                    if (!((EntityPlayer) source.getEntity()).capabilities.isCreativeMode) dropItem(Extruder.Items.extruder, 1);
+                    if (source.getEntity().isSprinting()) setMotion(0, 0, 0);
+                }
 
                 if (inventory.contents().size() != 0)
                     for (ItemStack stack : inventory.contents())
                         if (stack != null) entityDropItem(stack, 0);
             }
 
+            if (!getRunning())
+                setMotion((double) getFacing().offsetX / 10, (double) getFacing().offsetY / 10, (double) getFacing().offsetZ / 10);
             setRunning(!getRunning());
         }
 
-        if (worldObj.isRemote && !isDead) worldObj.playAuxSFX(1001, (int) posX, (int) posY, (int) posZ, 0);
+        if (worldObj.isRemote) worldObj.playAuxSFX(1001, (int) posX, (int) posY, (int) posZ, 0);
 
-        return true;
-    }
-
-    private void run() {
-        setSineWave(getSineWave() + 1);
-        setMotion((double) getFacing().offsetX / 10, (double) getFacing().offsetY / 10, (double) getFacing().offsetZ / 10);
-
-        BlockCoord front = new BlockCoord(Math.floor(posX) + getFacing().offsetX, Math.floor(posY) + getFacing().offsetY, Math.floor(posZ) + getFacing().offsetZ);
-        BlockCoord back = new BlockCoord(Math.floor(posX) - getFacing().offsetX, Math.floor(posY) - getFacing().offsetY, Math.floor(posZ) - getFacing().offsetZ);
-        if (isOnCenter()) {
-            if (worldObj.isRemote) worldObj.playAuxSFX(1001, (int) posX, (int) posY, (int) posZ, 0);
-
-            if (worldObj.getBlock(front.x, front.y, front.z) instanceof BlockObsidian) {
-                setMotion(0, 0, 0);
-                setRunning(false);
-            } else if (!worldObj.isAirBlock(front.x, front.y, front.z)) {
-                setMotion(0, 0, 0);
-                worldObj.setBlockToAir(front.x, front.y, front.z);
-            }
-
-            placeBlockBehind(back);
-        }
-    }
-
-    private void breakBlockInFront(BlockCoord coord) {
-
-    }
-
-    private void placeBlockBehind(BlockCoord coord) {
-        if (worldObj.isRemote) return;
-
-        if (worldObj.isAirBlock(coord.x, coord.y, coord.z)) {
-            Block block = null;
-            if (inventory.contents().size() != 0) {
-                for (int i = 1; i < 10; ++i) { // runs through slots 1-9
-                    ItemStack stack = inventory.decrStackSize(i, 1);
-                    if (stack == null) continue;
-                    block = Block.getBlockFromItem(stack.getItem());
-                    worldObj.setBlock(coord.x, coord.y, coord.z, block, stack.getItemDamage(), 3);
-                    break;
-                }
-            }
-        }
-    }
-
-    private void postRun() {
-        if (motionX == 0 && motionY == 0 && motionZ == 0) return;
-
-        if (isOnCenter()) setMotion(0, 0, 0);
-    }
-
-    // there might be a better way to do this
-    private boolean isOnCenter() {
-        BigDecimal x = new BigDecimal(posX).setScale(1, RoundingMode.HALF_UP);
-        BigDecimal y  = new BigDecimal(posY).setScale(1, RoundingMode.HALF_UP);
-        BigDecimal z = new BigDecimal(posZ).setScale(1, RoundingMode.HALF_UP);
-        float modX = Math.abs(x.floatValue() % 1);
-        float modY = Math.abs(y.floatValue() % 1);
-        float modZ = Math.abs(z.floatValue() % 1);
-        return modX == .5 && modY == 0 && modZ == .5;
+        return false;
     }
 
     public void setMotion(double x, double y, double z) {
         motionX = x;
         motionY = y;
         motionZ = z;
+    }
+
+    @Override
+    public boolean canBeCollidedWith() {
+        return !isDead;
+    }
+
+    @Override
+    public boolean canBePushed() {
+        return false;
+    }
+
+    @Override
+    public boolean isPushedByWater() {
+        return false;
+    }
+
+    @Override
+    public AxisAlignedBB getBoundingBox() {
+        return boundingBox;
+    }
+
+    @Override
+    public SyncMap<SyncedEntity> getSyncMap() {
+        return syncMap;
+    }
+
+    public IValueProvider<Integer> getFuelProvider() {
+        return fuel;
     }
 
     // from here on, there are just the getters and setters for the variables I have on datawatcher
@@ -261,5 +361,13 @@ public class EntityExtruder extends Entity implements IInventoryProvider {
 
     public void setSineWave(int sineWave) {
         dataWatcher.updateObject(dataWatcherStart + 4, sineWave);
+    }
+
+    public boolean getIsCentered() {
+        return dataWatcher.getWatchableObjectByte(dataWatcherStart + 5) != 0;
+    }
+
+    public void setIsCentered(boolean isOnCenter) {
+        dataWatcher.updateObject(dataWatcherStart + 5, isOnCenter ? (byte) 1 : 0);
     }
 }

@@ -7,14 +7,13 @@ package extruder;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.Slot;
 import dynamics.container.ContainerInventoryProvider;
 
 public class ContainerExtruder extends ContainerInventoryProvider<EntityExtruder> {
 
     public ContainerExtruder(IInventory playerInventory, EntityExtruder extruder) {
         super (playerInventory, extruder);
-        addSlotToContainer(new Slot(inventory, 0, 79, 19));
+        addSlotToContainer(new RestrictedSlot(inventory, 0, 79, 19));
         addInventoryLine(7, 47, 1, 9);
         addInventoryLine(7, 86, 10, 9);
         addInventoryLine(7, 104, 19, 9);

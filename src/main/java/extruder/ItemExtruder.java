@@ -5,7 +5,7 @@
  */
 package extruder;
 
-import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MovingObjectPosition;
@@ -16,7 +16,7 @@ import dynamics.item.DynamicItem;
 public class ItemExtruder extends DynamicItem {
 
     public ItemExtruder() {
-        this.setCreativeTab(Extruder.tabExtruder);
+        this.setCreativeTab(CreativeTabs.tabMisc);
     }
 
     @Override
@@ -68,6 +68,7 @@ public class ItemExtruder extends DynamicItem {
         if (player.rotationYaw >= 45 && player.rotationYaw < 135) return ForgeDirection.WEST;
         else if (player.rotationYaw >= 135 && player.rotationYaw < 225) return ForgeDirection.NORTH;
         else if (player.rotationYaw >= 225 && player.rotationYaw < 315) return ForgeDirection.EAST;
-        else return ForgeDirection.SOUTH;
+        else if (player.rotationYaw >= 315 || player.rotationYaw < 45) return ForgeDirection.SOUTH;
+        else return ForgeDirection.UP; // for testing purposes
     }
 }

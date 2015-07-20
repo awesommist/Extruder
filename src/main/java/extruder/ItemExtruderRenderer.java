@@ -11,10 +11,11 @@ import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.IItemRenderer;
 import dynamics.utils.render.RenderUtils;
-import org.lwjgl.opengl.GL11;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+
+import org.lwjgl.opengl.GL11;
 
 @SideOnly(Side.CLIENT)
 public class ItemExtruderRenderer implements IItemRenderer {
@@ -36,11 +37,18 @@ public class ItemExtruderRenderer implements IItemRenderer {
 
             EntityExtruder extruder = new EntityExtruder(Minecraft.getMinecraft().theWorld);
 
-            if (type.equals(ItemRenderType.INVENTORY)) {
-                GL11.glRotatef(-90, 1, 0, 0);
-                GL11.glTranslatef(-0.5F, 0, -0.5F);
-            } else {
-                GL11.glTranslatef(0.5F, 0, 0.5F);
+            switch (type) {
+                case ENTITY:
+                    GL11.glTranslatef(0, 0, 0.25f);
+                    GL11.glRotatef(-90, 1, 0, 0);
+                    GL11.glScalef(0.5f, 0.5f, 0.5f);
+                    break;
+                case INVENTORY:
+                    GL11.glRotatef(-90, 1, 0, 0);
+                    GL11.glTranslatef(-0.5f, 0, -0.5f);
+                    break;
+                default:
+                    GL11.glTranslatef(0.5f, 0, 0.5f);
             }
 
             Render renderer = RenderManager.instance.getEntityRenderObject(extruder);

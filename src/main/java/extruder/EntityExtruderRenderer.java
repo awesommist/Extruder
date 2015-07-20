@@ -11,10 +11,11 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.model.AdvancedModelLoader;
 import net.minecraftforge.common.util.ForgeDirection;
-import org.lwjgl.opengl.GL11;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+
+import org.lwjgl.opengl.GL11;
 
 @SideOnly(Side.CLIENT)
 public class EntityExtruderRenderer extends Render {
@@ -26,14 +27,14 @@ public class EntityExtruderRenderer extends Render {
     public void doRender(Entity entity, double x, double y, double z, float yaw, float partialTickTime) {
         EntityExtruder extruder;
         if (entity instanceof EntityExtruder) extruder = (EntityExtruder) entity;
-        else return;
+        else throw new ClassCastException("Couldn't render entity extruder because it couldn't be cast from entity");
 
         GL11.glPushMatrix();
 
         bindTexture(texture);
-        preRender(extruder, x, y, z, yaw, partialTickTime);
-        renderBase(extruder, x, y, z, yaw, partialTickTime);
-        renderDrill(extruder, x, y, z, yaw, partialTickTime);
+        preRender(extruder, partialTickTime);
+        renderBase(extruder, x, y, z);
+        renderDrill(extruder);
 
         GL11.glPopMatrix();
     }
@@ -43,8 +44,8 @@ public class EntityExtruderRenderer extends Render {
         return texture;
     }
 
-    // this rotation is a bit messed up
-    private void preRender(EntityExtruder extruder, double x, double y, double z, float yaw, float partialTickTime) {
+    // this rotation is a bit messed up. it shakes the entity when it is damaged
+    private void preRender(EntityExtruder extruder, float partialTickTime) {
         if (extruder.getDamageTaken() == 0) return;
 
         ForgeDirection facing = extruder.getFacing();
@@ -55,7 +56,7 @@ public class EntityExtruderRenderer extends Render {
         GL11.glTranslatef(0, 0.25F, -0.5F);
     }
 
-    private void renderBase(EntityExtruder extruder, double x, double y, double z, float yaw, float partialTickTime) {
+    private void renderBase(EntityExtruder extruder, double x, double y, double z) {
         GL11.glTranslated(x, y, z);
         float angle = determineAngle(extruder);
         switch (extruder.getFacing()) {
@@ -79,7 +80,7 @@ public class EntityExtruderRenderer extends Render {
     }
 
     // not smooth at all
-    private void renderDrill(EntityExtruder extruder, double x, double y, double z, float yaw, float partialTickTime) {
+    private void renderDrill(EntityExtruder extruder) {
         GL11.glTranslatef(0.0F, 0.0F, -0.3125F);
 
         GL11.glTranslatef(0, 0, MathHelper.sin(extruder.getSineWave()) / 8);

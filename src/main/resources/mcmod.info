@@ -1,0 +1,17 @@
+[
+{
+  "modid": "extruder",
+  "name": "Extruder Mod",
+  "description": "Adds Extruders to Minecraft!",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "logoFile": "",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["awesommist"],
+  "credits": "awesommist",
+  "parent": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]

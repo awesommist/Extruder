@@ -14,7 +14,7 @@ import cpw.mods.fml.common.network.IGuiHandler;
 
 public class ExtruderGuiHandler implements IGuiHandler {
 
-    public static enum GuiId {
+    public enum GuiId {
         EXTRUDER;
 
         public static final GuiId[] VALUES = GuiId.values();
