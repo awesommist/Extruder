@@ -6,7 +6,7 @@
   "version": "${version}",
   "mcversion": "${mcversion}",
   "logoFile": "",
-  "url": "",
+  "url": "https://github.com/awesommist/Extruder",
   "updateUrl": "",
   "authorList": ["awesommist"],
   "credits": "awesommist",

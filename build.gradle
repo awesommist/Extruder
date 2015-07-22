@@ -17,38 +17,38 @@ buildscript {
 
 apply plugin: 'forge'
 
-ext.configFile = file('build.properties')
+ext.configFile = file('gradle.properties')
 
 ext.config = parseConfig(configFile)
 
-version = "${config.version}-${config.build_number}"
+version = "${config.mc_version}-${config.version}.${config.build_number}"
 group= "extruder"
 archivesBaseName = config.mod_name
 
 minecraft {
     version = "${config.mc_version}-${config.forge_version}-${config.mc_version}"
-    runDir = "buildbin"
-    
+    runDir = "out/run"
+
     replace '$VERSION$', config.version
     replace '$BUILD$', config.build_number
-    
+
     replaceIn 'Extruder.java'
 }
 
 dependencies {
-
+    compile fileTree(dir: 'lib', include: '*.jar')
 }
 
 processResources {
     inputs.property "version", project.version
     inputs.property "mcversion", project.minecraft.version
-    
+
     from(sourceSets.main.resources.srcDirs) {
         include 'mcmod.info'
-        
+
         expand 'version': project.version, 'mcversion': project.minecraft.version
     }
-    
+
     from(sourceSets.main.resources.srcDirs) {
         exclude 'mcmod.info'
     }
@@ -56,7 +56,7 @@ processResources {
 
 task deobfJar(type: Jar) {
     from(sourceSets.main.output)
-        archiveName = "${baseName} ${version}-deobf.${extension}"
+    archiveName = "${baseName}-${version}-deobf.${extension}"
 }
 
 artifacts {
@@ -75,8 +75,8 @@ def parseConfig(File config) {
         def prop = new Properties()
         prop.load(it)
         return (new ConfigSlurper().parse(prop))
+    }
 }
-} // Gradle doesn't build without these brackets
 
 build.dependsOn tasks.incrementBuildNumber
 defaultTasks 'clean', 'build'

@@ -29,7 +29,7 @@ public class Extruder {
 
     public static final String MODID = "extruder";
     public static final String NAME = "Extruder Mod";
-    public static final String VERSION = "$VERSION$-$BUILD$";
+    public static final String VERSION = "$VERSION$.$BUILD$";
     public static final String PROXY_SERVER = "extruder.ServerProxy";
     public static final String PROXY_CLIENT = "extruder.ClientProxy";
     public static final String DEPENDENCIES = "required-after:dynamiclib";
